@@ -1,0 +1,221 @@
+CREATE DATABASE InsuranceAnalyticsDB;
+USE InsuranceAnalyticsDB;
+
+CREATE SCHEMA analytics;
+
+---Portfolio KPIs------------------
+
+SELECT
+    COUNT(*) AS TOTAL_POLICIES,
+    COUNT(DISTINCT CUSTOMER_ID) AS UNIQUE_CUSTOMERS,
+    ROUND(AVG(ANNUAL_PREMIUM), 2) AS AVG_ANNUAL_PREMIUM,
+    ROUND(SUM(ANNUAL_PREMIUM), 2) AS TOTAL_ANNUAL_PREMIUM
+FROM analytics.policy_360;
+
+
+---------Product Portfolio-----------------
+SELECT
+    POLICY_TYPE,
+    COUNT(*) AS POLICY_COUNT,
+    ROUND(AVG(ANNUAL_PREMIUM), 2) AS AVG_ANNUAL_PREMIUM,
+    ROUND(SUM(ANNUAL_PREMIUM), 2) AS TOTAL_ANNUAL_PREMIUM
+FROM analytics.policy_360
+GROUP BY POLICY_TYPE
+ORDER BY TOTAL_ANNUAL_PREMIUM DESC;
+
+
+------Policy Status-----------------------
+
+SELECT
+    POLICY_STATUS,
+    COUNT(*) AS POLICY_COUNT,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS POLICY_PERCENTAGE
+FROM analytics.policy_360
+GROUP BY POLICY_STATUS
+ORDER BY POLICY_COUNT DESC;
+
+
+------------Customer Risk Mix---------------------
+
+SELECT
+    CUSTOMER_RISK_SEGMENT,
+    COUNT(DISTINCT CUSTOMER_ID) AS CUSTOMERS,
+    COUNT(*) AS POLICIES,
+    ROUND(AVG(ANNUAL_PREMIUM), 2) AS AVG_PREMIUM
+FROM analytics.policy_360
+GROUP BY CUSTOMER_RISK_SEGMENT
+ORDER BY CUSTOMERS DESC;
+
+--------------Geographic Performance----------------------
+
+SELECT
+    STATE,
+    COUNT(DISTINCT CUSTOMER_ID) AS CUSTOMERS,
+    COUNT(*) AS POLICIES,
+    ROUND(SUM(ANNUAL_PREMIUM), 2) AS TOTAL_ANNUAL_PREMIUM
+FROM analytics.policy_360
+GROUP BY STATE
+ORDER BY TOTAL_ANNUAL_PREMIUM DESC;
+
+------------------Claims Summary by Product-----------------
+
+
+SELECT
+    POLICY_TYPE,
+    SUM(TOTAL_CLAIMS) AS TOTAL_CLAIMS,
+    ROUND(SUM(TOTAL_CLAIM_AMOUNT), 2) AS CLAIM_AMOUNT,
+    ROUND(SUM(TOTAL_SETTLEMENT_AMOUNT), 2) AS SETTLEMENT_AMOUNT,
+    ROUND(AVG(CASE WHEN TOTAL_CLAIMS > 0 THEN AVG_CLAIM_AMOUNT END), 2) AS AVG_POLICY_CLAIM_AMOUNT
+FROM analytics.policy_360
+GROUP BY POLICY_TYPE
+ORDER BY TOTAL_CLAIMS DESC;
+
+--------------------Fraud Alerts------------------------------
+
+SELECT
+    POLICY_TYPE,
+    SUM(SUSPECTED_FRAUD_COUNT) AS SUSPECTED_FRAUD,
+    SUM(CONFIRMED_FRAUD_COUNT) AS CONFIRMED_FRAUD,
+    SUM(HAS_FRAUD_ALERT) AS POLICIES_WITH_FRAUD_ALERT
+FROM analytics.policy_360
+GROUP BY POLICY_TYPE
+ORDER BY POLICIES_WITH_FRAUD_ALERT DESC;
+
+----------------Payment Problems--------------------------------
+
+SELECT
+    POLICY_TYPE,
+    SUM(HAS_PAYMENT_RECORD) AS POLICIES_WITH_PAYMENT_HISTORY,
+    SUM(FAILED_PAYMENT_COUNT) AS FAILED_PAYMENTS,
+    SUM(OVERDUE_PAYMENT_COUNT) AS OVERDUE_PAYMENTS,
+    ROUND(AVG(AVG_PAYMENT_DELAY), 2) AS AVG_PAYMENT_DELAY
+FROM analytics.policy_360
+WHERE HAS_PAYMENT_RECORD = 1
+GROUP BY POLICY_TYPE
+ORDER BY AVG_PAYMENT_DELAY DESC;
+
+----------------------------Renewal KPI-------------------------------------
+SELECT
+    COUNT(*) AS FINALIZED_RENEWALS,
+    SUM(RENEWED_FLAG) AS RENEWED_POLICIES,
+    COUNT(*) - SUM(RENEWED_FLAG) AS NON_RENEWED_POLICIES,
+    ROUND(AVG(CAST(RENEWED_FLAG AS FLOAT)) * 100, 2) AS RENEWAL_RATE
+FROM analytics.policy_360
+WHERE HAS_FINALIZED_RENEWAL = 1;
+
+-------------------------Premium Increase vs Renewal------------------------
+
+
+WITH renewal_data AS (
+    SELECT
+        PREMIUM_INCREASE_PCT,
+        RENEWED_FLAG,
+        CASE
+            WHEN PREMIUM_INCREASE_PCT < 5 THEN 'Below 5%'
+            WHEN PREMIUM_INCREASE_PCT < 10 THEN '5-10%'
+            WHEN PREMIUM_INCREASE_PCT < 15 THEN '10-15%'
+            ELSE '15%+'
+        END AS PREMIUM_INCREASE_BAND
+    FROM analytics.policy_360
+    WHERE HAS_FINALIZED_RENEWAL = 1
+)
+
+SELECT
+    PREMIUM_INCREASE_BAND,
+    COUNT(*) AS POLICIES,
+    ROUND(AVG(CAST(RENEWED_FLAG AS FLOAT)) * 100, 2) AS RENEWAL_RATE
+FROM renewal_data
+GROUP BY PREMIUM_INCREASE_BAND
+ORDER BY MIN(PREMIUM_INCREASE_PCT);
+
+--------------------------Renewal by Loyalty------------------------------------------------------------
+
+SELECT
+    LOYALTY_YEARS,
+    COUNT(*) AS POLICIES,
+    ROUND(AVG(CAST(RENEWED_FLAG AS FLOAT)) * 100, 2) AS RENEWAL_RATE
+FROM analytics.policy_360
+WHERE HAS_FINALIZED_RENEWAL = 1
+GROUP BY LOYALTY_YEARS
+ORDER BY LOYALTY_YEARS;
+
+-----------------------Payment Delay vs Renewal------------------------------------------
+WITH payment_data AS (
+    SELECT
+        RENEWED_FLAG,
+        CASE
+            WHEN AVG_PAYMENT_DELAY <= 0 THEN 'On Time'
+            WHEN AVG_PAYMENT_DELAY <= 7 THEN '1-7 Days'
+            WHEN AVG_PAYMENT_DELAY <= 15 THEN '8-15 Days'
+            WHEN AVG_PAYMENT_DELAY <= 30 THEN '16-30 Days'
+            ELSE '30+ Days'
+        END AS PAYMENT_DELAY_BAND
+    FROM analytics.policy_360
+    WHERE HAS_FINALIZED_RENEWAL = 1
+      AND HAS_PAYMENT_RECORD = 1
+)
+
+SELECT
+    PAYMENT_DELAY_BAND,
+    COUNT(*) AS POLICIES,
+    ROUND(AVG(CAST(RENEWED_FLAG AS FLOAT)) * 100, 2) AS RENEWAL_RATE
+FROM payment_data
+GROUP BY PAYMENT_DELAY_BAND;
+
+
+-------------------------Top Products Per State Using Window Functions---------------------------
+
+
+WITH ProductState AS (
+    SELECT
+        STATE,
+        POLICY_TYPE,
+        COUNT(*) AS POLICY_COUNT,
+        SUM(ANNUAL_PREMIUM) AS TOTAL_ANNUAL_PREMIUM
+    FROM analytics.policy_360
+    GROUP BY STATE, POLICY_TYPE
+),
+
+RankedProducts AS (
+    SELECT
+        *,
+        DENSE_RANK() OVER (
+            PARTITION BY STATE
+            ORDER BY TOTAL_ANNUAL_PREMIUM DESC
+        ) AS PRODUCT_RANK
+    FROM ProductState
+)
+
+SELECT *
+FROM RankedProducts
+WHERE PRODUCT_RANK <= 3
+ORDER BY STATE, PRODUCT_RANK;
+
+
+
+--------------Create a Renewal Analysis View------------
+CREATE VIEW analytics.vw_finalized_renewals
+AS
+
+SELECT *
+FROM analytics.policy_360
+
+WHERE HAS_FINALIZED_RENEWAL = 1;
+
+CREATE VIEW analytics.vw_finalized_renewals
+AS
+
+SELECT *
+FROM analytics.policy_360
+
+WHERE HAS_FINALIZED_RENEWAL = 1;
+
+
+CREATE OR ALTER VIEW analytics.vw_policy_360_dashboard
+AS
+SELECT *
+FROM analytics.policy_360;
+
+SELECT TOP 10 *
+FROM analytics.vw_policy_360_dashboard;
+
