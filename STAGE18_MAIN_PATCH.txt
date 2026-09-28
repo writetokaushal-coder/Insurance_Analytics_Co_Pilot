@@ -1,0 +1,43 @@
+PATCH api/main.py
+
+1) Add this import:
+
+from api.chat_llm import (
+    router as ai_copilot_router
+)
+
+
+2) AFTER app = FastAPI(...) is created, add:
+
+app.include_router(
+    ai_copilot_router
+)
+
+
+Keep your earlier routers during testing:
+
+app.include_router(
+    chat_router
+)
+
+app.include_router(
+    stateful_chat_router
+)
+
+app.include_router(
+    ai_copilot_router
+)
+
+
+During migration you will have:
+
+POST /chat
+    Stage 17 deterministic/stateless
+
+POST /chat/v2
+    Stage 17.9 deterministic/stateful
+
+POST /chat/ai
+    Stage 18 LLM + tools + session history
+
+After Stage 18 is validated, /chat/ai becomes the main conversational endpoint.
