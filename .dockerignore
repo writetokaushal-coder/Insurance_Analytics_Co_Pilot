@@ -1,0 +1,16 @@
+.venv
+venv
+.git
+.vscode
+.idea
+__pycache__
+*.pyc
+.pytest_cache
+notebooks
+data/raw
+data/processed
+reports
+*.log
+.env
+.env.production
+.env.docker

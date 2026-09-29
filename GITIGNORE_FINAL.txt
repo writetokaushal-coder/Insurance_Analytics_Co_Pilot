@@ -1,0 +1,35 @@
+# Secrets
+.env
+.env.production
+.env.docker
+*.secret
+
+# Environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs / caches
+*.log
+.cache/
+reports/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep examples
+!.env.example
+!.env.production.example
+!.env.docker.example

@@ -1,0 +1,11 @@
+Add to api/main.py:
+
+from api.chat_admin import router as ai_admin_router
+
+After app = FastAPI(...):
+
+app.include_router(ai_admin_router)
+
+New endpoints:
+GET /ai/session/{session_id}
+GET /ai/audit/{session_id}

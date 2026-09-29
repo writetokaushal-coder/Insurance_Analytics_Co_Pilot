@@ -1,31 +1,45 @@
 import os
 from urllib.parse import quote_plus
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
-
-# Load .env file
 load_dotenv()
 
-
-# Get values from .env
 SQL_SERVER = os.getenv("SQL_SERVER")
-SQL_DATABASE = os.getenv("SQL_DATABASE")
-SQL_DRIVER = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server")
+SQL_DATABASE = os.getenv("SQL_DATABASE", "InsuranceAnalyticsDB")
+SQL_DRIVER = os.getenv("SQL_DRIVER", "ODBC Driver 18 for SQL Server")
+SQL_USERNAME = os.getenv("SQL_USERNAME")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
 
+if not SQL_SERVER:
+    raise RuntimeError("SQL_SERVER is missing from .env")
 
-# Create connection string
-connection_string = quote_plus(
-    f"DRIVER={{{SQL_DRIVER}}};"
-    f"SERVER={SQL_SERVER};"
-    f"DATABASE={SQL_DATABASE};"
-    f"Trusted_Connection=yes;"
-    f"TrustServerCertificate=yes;"
-)
+if SQL_USERNAME and SQL_PASSWORD:
+    odbc_connection = (
+        f"DRIVER={{{SQL_DRIVER}}};"
+        f"SERVER={SQL_SERVER};"
+        f"DATABASE={SQL_DATABASE};"
+        f"UID={SQL_USERNAME};"
+        f"PWD={SQL_PASSWORD};"
+        "Encrypt=yes;"
+        "TrustServerCertificate=yes;"
+    )
+else:
+    odbc_connection = (
+        f"DRIVER={{{SQL_DRIVER}}};"
+        f"SERVER={SQL_SERVER};"
+        f"DATABASE={SQL_DATABASE};"
+        "Trusted_Connection=yes;"
+        "Encrypt=yes;"
+        "TrustServerCertificate=yes;"
+    )
 
+connection_url = "mssql+pyodbc:///?odbc_connect=" + quote_plus(odbc_connection)
 
-# Create database engine
 engine = create_engine(
-    f"mssql+pyodbc:///?odbc_connect={connection_string}",
-    pool_pre_ping=True
+    connection_url,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    future=True,
 )

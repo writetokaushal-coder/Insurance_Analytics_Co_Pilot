@@ -1,0 +1,25 @@
+FINAL PACK APPLY ORDER
+======================
+
+1. Make a Git checkpoint or folder backup.
+2. Extract/merge this pack at project root.
+3. Run sql/04_ai_copilot_state.sql in SSMS.
+4. Ensure your existing human-review table still exists.
+5. Put approved docs in rag/knowledge and run:
+   python -m scripts.build_knowledge_index
+6. Run:
+   python -m scripts.predeploy_check
+7. Run:
+   python -m pytest tests -v
+8. Start production-like API:
+   .\scripts\run_prod_api.ps1
+9. In another terminal run:
+   python -m scripts.smoke_test_api
+10. Run all-policy-type validation:
+    python -m scripts.test_all_policy_types
+11. Start GUI:
+    .\scripts\run_prod_gui.ps1
+12. Complete manual smoke checklist in FINAL_DEPLOYMENT_GUIDE.md.
+13. Only after local production-like run passes, freeze dependencies:
+    .\scripts\export_requirements_lock.ps1
+14. Configure .env.docker and test Docker.

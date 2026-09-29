@@ -1,1 +1,1 @@
-"""Project utility scripts."""
+"""Utility scripts for Insurance AI Copilot."""

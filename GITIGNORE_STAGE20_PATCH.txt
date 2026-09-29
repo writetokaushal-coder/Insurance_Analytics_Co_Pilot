@@ -1,0 +1,38 @@
+Make sure your existing .gitignore contains:
+
+# Secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Local caches
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+IMPORTANT:
+Do NOT ignore the models/ folder if you want the trained project artifacts
+to remain part of your demo repository.
+
+If model files are too large for GitHub, use Git LFS instead.

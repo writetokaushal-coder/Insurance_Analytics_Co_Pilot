@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+streamlit
+requests
+pandas
+numpy
+sqlalchemy
+pyodbc
+python-dotenv
+joblib
+scikit-learn
+xgboost
+langchain-core
+langchain-ollama
+openpyxl
+pytest

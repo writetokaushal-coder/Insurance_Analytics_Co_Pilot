@@ -1,0 +1,13 @@
+PATCH api/main.py
+
+Add:
+
+from api.insights import router as insights_router
+
+After app = FastAPI(...) add:
+
+app.include_router(insights_router)
+
+New endpoints:
+GET /policy/{policy_id}
+GET /portfolio/summary

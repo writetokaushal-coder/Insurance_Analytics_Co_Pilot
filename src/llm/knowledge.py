@@ -1,227 +1,49 @@
 from pathlib import Path
+import joblib
+from sklearn.metrics.pairwise import cosine_similarity
 
-from sklearn.feature_extraction.text import (
-    TfidfVectorizer
-)
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+INDEX_PATH = PROJECT_DIR / "rag" / "index" / "knowledge_index.joblib"
+_CACHE = None
 
-from sklearn.metrics.pairwise import (
-    cosine_similarity
-)
+def _load_index():
+    global _CACHE
+    if _CACHE is not None:
+        return _CACHE
+    if not INDEX_PATH.exists():
+        return None
+    _CACHE = joblib.load(INDEX_PATH)
+    return _CACHE
 
-
-PROJECT_DIR = (
-    Path(__file__)
-    .resolve()
-    .parents[2]
-)
-
-KNOWLEDGE_DIR = (
-    PROJECT_DIR
-    / "rag"
-    / "knowledge"
-)
-
-
-def _load_chunks():
-
-    if not KNOWLEDGE_DIR.exists():
-        return []
-
-
-    chunks = []
-
-
-    for path in KNOWLEDGE_DIR.rglob("*"):
-
-        if (
-            not path.is_file()
-            or
-            path.suffix.lower()
-            not in {
-                ".txt",
-                ".md",
-            }
-        ):
-            continue
-
-
-        text = path.read_text(
-            encoding="utf-8",
-            errors="ignore",
-        )
-
-
-        paragraphs = [
-            paragraph.strip()
-            for paragraph
-            in text.split(
-                "\n\n"
-            )
-            if paragraph.strip()
-        ]
-
-
-        for index, paragraph in enumerate(
-            paragraphs
-        ):
-
-            # Keep retrieval units manageable.
-            if len(paragraph) > 1800:
-
-                for start in range(
-                    0,
-                    len(paragraph),
-                    1500,
-                ):
-
-                    piece = paragraph[
-                        start:
-                        start + 1800
-                    ].strip()
-
-                    if piece:
-
-                        chunks.append({
-                            "source":
-                                path.name,
-
-                            "chunk_id":
-                                f"{index}-{start}",
-
-                            "text":
-                                piece,
-                        })
-
-            else:
-
-                chunks.append({
-                    "source":
-                        path.name,
-
-                    "chunk_id":
-                        str(index),
-
-                    "text":
-                        paragraph,
-                })
-
-
-    return chunks
-
-
-def search_knowledge(
-    query: str,
-    top_k: int = 4,
-):
-
-    chunks = _load_chunks()
-
-
-    if not chunks:
-
+def search_knowledge(query: str, top_k: int = 4):
+    index = _load_index()
+    if index is None:
         return {
-            "status":
-                "empty",
-
-            "message":
-                (
-                    "No .txt or .md knowledge files "
-                    "were found in rag/knowledge."
-                ),
-
-            "results":
-                [],
+            "status": "missing_index",
+            "message": "Knowledge index is missing. Run: python -m scripts.build_knowledge_index",
+            "results": [],
         }
 
-
-    documents = [
-        chunk[
-            "text"
-        ]
-        for chunk in chunks
-    ]
-
-
-    vectorizer = (
-        TfidfVectorizer(
-            stop_words="english"
-        )
-    )
-
-
-    matrix = vectorizer.fit_transform(
-        documents
-        +
-        [
-            query
-        ]
-    )
-
-
-    scores = cosine_similarity(
-        matrix[-1:],
-        matrix[:-1],
-    )[0]
-
-
-    ranked_indexes = (
-        scores.argsort()[::-1]
-    )
-
-
+    vectorizer = index["vectorizer"]
+    matrix = index["matrix"]
+    chunks = index["chunks"]
+    query_vector = vectorizer.transform([query])
+    scores = cosine_similarity(query_vector, matrix)[0]
+    ranked_indexes = scores.argsort()[::-1]
     results = []
 
-
-    for index in ranked_indexes:
-
+    for item_index in ranked_indexes:
         if len(results) >= top_k:
             break
-
-
-        score = float(
-            scores[
-                index
-            ]
-        )
-
-
+        score = float(scores[item_index])
         if score <= 0:
             continue
-
-
-        chunk = chunks[
-            index
-        ]
-
-
+        chunk = chunks[item_index]
         results.append({
-            "source":
-                chunk[
-                    "source"
-                ],
-
-            "chunk_id":
-                chunk[
-                    "chunk_id"
-                ],
-
-            "score":
-                round(
-                    score,
-                    4
-                ),
-
-            "text":
-                chunk[
-                    "text"
-                ],
+            "source": chunk["source"],
+            "chunk_id": chunk["chunk_id"],
+            "score": round(score, 4),
+            "text": chunk["text"],
         })
 
-
-    return {
-        "status":
-            "ok",
-
-        "results":
-            results,
-    }
+    return {"status": "ok", "results": results}
