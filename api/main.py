@@ -4,6 +4,8 @@ from fastapi import (
     Query,
 )
 
+from functools import lru_cache
+
 from sqlalchemy import text
 
 from api.schemas import (
@@ -126,7 +128,32 @@ def health():
         "database":
             database_status,
     }
-
+@app.get("/policy/{policy_id}/details")
+def get_policy_details(policy_id: str):
+    query = text(
+        """
+        SELECT TOP 1
+            POLICY_ID, CUSTOMER_ID, POLICY_TYPE, POLICY_STATUS,
+            SALES_CHANNEL, PAYMENT_MODE, SUM_INSURED, ANNUAL_PREMIUM,
+            RISK_SCORE, RISK_BAND, CUSTOMER_RISK_SEGMENT, STATE,
+            HAS_PAYMENT_RECORD, TOTAL_CLAIMS, HAS_UNDERWRITING_RECORD,
+            UW_DECISION, HAS_RENEWAL_RECORD, HAS_FINALIZED_RENEWAL,
+            RENEWED_FLAG
+        FROM analytics.policy_360 WITH (NOLOCK)
+        WHERE POLICY_ID = :policy_id
+        """
+    )
+    
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(query, {"policy_id": policy_id.strip()}).mappings().first()
+            
+        if not row:
+            raise HTTPException(status_code=404, detail="Policy ID database mein nahi mili.")
+            
+        return dict(row)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get(
     "/predict/renewal/{policy_id}"
@@ -191,6 +218,43 @@ def renewal_prediction(
                 "renewal assessment."
             ),
         )
+
+@app.get(
+    "/claim/{claim_id}/details"
+)
+def get_claim_details(
+    claim_id: str
+):
+    query = text(
+        """
+        SELECT 
+            c.CLAIM_AMOUNT, c.REPORTING_DELAY_DAYS, c.INCIDENT_MONTH, c.CLAIM_TYPE, 
+            c.SOURCE, c.CLAIM_SEVERITY, p.AGE, p.ANNUAL_INCOME, p.CREDIT_SCORE, 
+            p.SUM_INSURED, p.ANNUAL_PREMIUM, p.RISK_SCORE as POLICY_RISK_SCORE,
+            p.GENDER, p.MARITAL_STATUS, p.OCCUPATION, p.STATE, 
+            p.CUSTOMER_RISK_SEGMENT, p.POLICY_TYPE, p.PAYMENT_MODE, p.RISK_BAND
+        FROM analytics.claims c
+        JOIN analytics.policy_360 p ON c.POLICY_ID = p.POLICY_ID
+        WHERE c.CLAIM_ID = :claim_id
+        """
+    )
+    
+    with engine.connect() as connection:
+        row = (
+            connection.execute(query, {"claim_id": claim_id})
+            .mappings()
+            .first()
+        )
+        
+    if not row:
+        raise HTTPException(
+            status_code=404, 
+            detail="Claim ID database mein nahi mili."
+        )
+        
+    return dict(row)
+
+
 
 
 @app.post(

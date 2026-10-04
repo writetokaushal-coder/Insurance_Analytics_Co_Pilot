@@ -744,350 +744,649 @@ elif page == "Renewal Risk":
 
 elif page == "Fraud Screening":
 
-    st.title(
-        "Fraud Risk Screening"
-    )
-
+    st.title("Fraud Risk Screening")
     st.warning(
         "Fraud model output is an investigation signal, "
         "not proof of fraud and not an automatic claim rejection."
     )
 
+    if "fraud_data" not in st.session_state:
+        st.session_state.fraud_data = {}
 
-    with st.form(
-        "fraud_form"
-    ):
+    # Fetch section using existing Policy ID
+    st.markdown("### Fetch Policy Details for Screening")
+    col_f1, col_f2 = st.columns([3, 1])
+    with col_f1:
+        fetch_policy_id = st.text_input("Enter Policy ID to Auto-fill", value="POL00004")
+    with col_f2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Fetch Data"):
+            try:
+                base_url = st.session_state["api_url"]
+                response = requests.get(f"{base_url}/policy/{fetch_policy_id.strip()}/details")
+                if response.status_code == 200:
+                    st.session_state.fraud_data = response.json()
+                    st.success("Data loaded successfully from Policy 360 mart!")
+                else:
+                    st.error("Policy ID not found.")
+            except Exception as e:
+                st.error("Backend connection error.")
 
-        c1, c2, c3 = (
-            st.columns(3)
-        )
+    st.divider()
+    data = st.session_state.fraud_data
 
+    with st.form("fraud_form"):
+        c1, c2, c3 = st.columns(3)
+        claim_id = c1.text_input("Claim ID", value="CLM000000015")
+        claim_amount = c2.number_input("Claim Amount", value=50000.0)
+        reporting_delay = c3.number_input("Reporting Delay Days", value=2, step=1)
 
-        claim_id = c1.text_input(
-            "Claim ID"
-        )
+        c1, c2, c3 = st.columns(3)
+        incident_month = c1.number_input("Incident Month", min_value=1, max_value=12, value=6)
+        age = c2.number_input("Age", value=int(data.get("AGE", 40)))
+        income = c3.number_input("Annual Income", value=float(data.get("ANNUAL_INCOME", 800000.0)))
 
-        claim_amount = c2.number_input(
-            "Claim Amount",
-            min_value=0.01,
-            value=50000.0,
-        )
+        c1, c2, c3 = st.columns(3)
+        credit_score = c3.number_input("Credit Score", value=int(data.get("CREDIT_SCORE", 700)))
+        sum_insured = c1.number_input("Sum Insured", value=float(data.get("SUM_INSURED", 500000.0)))
+        annual_premium = c2.number_input("Annual Premium", value=float(data.get("ANNUAL_PREMIUM", 15000.0)))
 
-        reporting_delay = c3.number_input(
-            "Reporting Delay Days",
-            min_value=0,
-            value=2,
-            step=1,
-        )
+        risk_score = st.number_input("Policy Risk Score", value=float(data.get("RISK_SCORE", 0.5)))
 
+        c1, c2, c3 = st.columns(3)
+        claim_type = c1.text_input("Claim Type", value="Accident")
+        source = c2.text_input("Source", value="Online")
+        claim_severity = c3.text_input("Claim Severity", value="Medium")
 
-        c1, c2, c3 = (
-            st.columns(3)
-        )
+        c1, c2, c3 = st.columns(3)
+        gender = c1.text_input("Gender", value=str(data.get("GENDER", "Male")))
+        marital_status = c2.text_input("Marital Status", value=str(data.get("MARITAL_STATUS", "Married")))
+        occupation = c3.text_input("Occupation", value=str(data.get("OCCUPATION", "Salaried")))
 
-
-        incident_month = c1.number_input(
-            "Incident Month",
-            min_value=1,
-            max_value=12,
-            value=6,
-            step=1,
-        )
-
-        age = c2.number_input(
-            "Age",
-            min_value=18,
-            max_value=120,
-            value=40,
-            step=1,
-        )
-
-        income = c3.number_input(
-            "Annual Income",
-            min_value=0.0,
-            value=800000.0,
-        )
-
-
-        c1, c2, c3 = (
-            st.columns(3)
-        )
-
-
-        credit_score = c1.number_input(
-            "Credit Score",
-            min_value=0,
-            value=700,
-            step=1,
-        )
-
-        sum_insured = c2.number_input(
-            "Sum Insured",
-            min_value=0.01,
-            value=500000.0,
-        )
-
-        annual_premium = c3.number_input(
-            "Annual Premium",
-            min_value=0.0,
-            value=15000.0,
-        )
-
-
-        risk_score = st.number_input(
-            "Policy Risk Score",
-            value=0.5,
-        )
-
-
-        c1, c2, c3 = (
-            st.columns(3)
-        )
-
-
-        claim_type = c1.text_input(
-            "Claim Type",
-            value="Accident",
-        )
-
-        source = c2.text_input(
-            "Source",
-            value="Online",
-        )
-
-        claim_severity = c3.text_input(
-            "Claim Severity",
-            value="Medium",
-        )
-
-
-        c1, c2, c3 = (
-            st.columns(3)
-        )
-
-
-        gender = c1.text_input(
-            "Gender",
-            value="Male",
-        )
-
-        marital_status = c2.text_input(
-            "Marital Status",
-            value="Married",
-        )
-
-        occupation = c3.text_input(
-            "Occupation",
-            value="Salaried",
-        )
-
-
-        c1, c2, c3 = (
-            st.columns(3)
-        )
-
-
-        state = c1.text_input(
-            "State",
-            value="Karnataka",
-        )
-
-        customer_risk = c2.text_input(
-            "Customer Risk Segment",
-            value="Medium",
-        )
-
-        policy_type = c3.text_input(
-            "Policy Type",
-            value="Health",
-        )
-
+        c1, c2, c3 = st.columns(3)
+        state = c1.text_input("State", value=str(data.get("STATE", "Karnataka")))
+        customer_risk = c2.text_input("Customer Risk Segment", value=str(data.get("CUSTOMER_RISK_SEGMENT", "Medium")))
+        policy_type = c3.text_input("Policy Type", value=str(data.get("POLICY_TYPE", "Health")))
 
         c1, c2 = st.columns(2)
+        payment_mode = c1.text_input("Payment Mode", value=str(data.get("PAYMENT_MODE", "Annual")))
+        risk_band = c2.text_input("Policy Risk Band", value=str(data.get("RISK_BAND", "Medium")))
 
-
-        payment_mode = c1.text_input(
-            "Payment Mode",
-            value="Annual",
-        )
-
-        risk_band = c2.text_input(
-            "Policy Risk Band",
-            value="Medium",
-        )
-
-
-        submitted = st.form_submit_button(
-            "Run Fraud Screening",
-            type="primary",
-        )
-
+        submitted = st.form_submit_button("Run Fraud Screening", type="primary")
 
     if submitted:
-
-        if not claim_id:
-
-            st.warning(
-                "Claim ID is required."
-            )
-
-        else:
-
-            payload = {
-                "CLAIM_ID":
-                    claim_id,
-
-                "CLAIM_AMOUNT":
-                    claim_amount,
-
-                "REPORTING_DELAY_DAYS":
-                    int(
-                        reporting_delay
-                    ),
-
-                "INCIDENT_MONTH":
-                    int(
-                        incident_month
-                    ),
-
-                "AGE":
-                    int(
-                        age
-                    ),
-
-                "ANNUAL_INCOME":
-                    income,
-
-                "CREDIT_SCORE":
-                    int(
-                        credit_score
-                    ),
-
-                "SUM_INSURED":
-                    sum_insured,
-
-                "ANNUAL_PREMIUM":
-                    annual_premium,
-
-                "RISK_SCORE":
-                    risk_score,
-
-                "CLAIM_TYPE":
-                    claim_type,
-
-                "SOURCE":
-                    source,
-
-                "CLAIM_SEVERITY":
-                    claim_severity,
-
-                "GENDER":
-                    gender,
-
-                "MARITAL_STATUS":
-                    marital_status,
-
-                "OCCUPATION":
-                    occupation,
-
-                "STATE":
-                    state,
-
-                "CUSTOMER_RISK_SEGMENT":
-                    customer_risk,
-
-                "POLICY_TYPE":
-                    policy_type,
-
-                "PAYMENT_MODE":
-                    payment_mode,
-
-                "RISK_BAND":
-                    risk_band,
-            }
+        payload = {
+            "CLAIM_ID": claim_id,
+            "CLAIM_AMOUNT": claim_amount,
+            "REPORTING_DELAY_DAYS": int(reporting_delay),
+            "INCIDENT_MONTH": int(incident_month),
+            "AGE": int(age),
+            "ANNUAL_INCOME": income,
+            "CREDIT_SCORE": int(credit_score),
+            "SUM_INSURED": sum_insured,
+            "ANNUAL_PREMIUM": annual_premium,
+            "RISK_SCORE": risk_score,
+            "CLAIM_TYPE": claim_type,
+            "SOURCE": source,
+            "CLAIM_SEVERITY": claim_severity,
+            "GENDER": gender,
+            "MARITAL_STATUS": marital_status,
+            "OCCUPATION": occupation,
+            "STATE": state,
+            "CUSTOMER_RISK_SEGMENT": customer_risk,
+            "POLICY_TYPE": policy_type,
+            "PAYMENT_MODE": payment_mode,
+            "RISK_BAND": risk_band,
+        }
+        try:
+            result = client.fraud(payload)
+            prediction = result.get("prediction", {})
+            decision = result.get("decision", {})
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Fraud Risk", f"{prediction.get('fraud_risk_pct', 0)}%")
+            c2.metric("Alert", prediction.get("prediction", "-"))
+            c3.metric("Human Review", "Required" if decision.get("human_review_required") else "No")
+            
+            display_decision(decision)
+            with st.expander("Raw API Response"):
+                st.json(result)
+        except Exception as error:
+            show_api_error(error)
 
 
-            try:
+# elif page == "Fraud Screening":
 
-                result = client.fraud(
-                    payload
-                )
+#     st.title("Fraud Risk Screening")
+
+#     st.warning(
+#         "Fraud model output is an investigation signal, "
+#         "not proof of fraud and not an automatic claim rejection."
+#     )
+
+#     # 1. Initialize State for Auto-fill Data
+#     if "claim_data" not in st.session_state:
+#         st.session_state.claim_data = {}
+
+#     # 2. Fetch Section (OUTSIDE the form so it doesn't trigger a full submission)
+#     st.markdown("### Fetch Claim Details")
+#     col1, col2 = st.columns([3, 1])
+#     with col1:
+#         fetch_claim_id = st.text_input("Enter Claim ID to Auto-fill", value="POL000051250")
+#     with col2:
+#         st.markdown("<br>", unsafe_allow_html=True)
+#         if st.button("Fetch Details"):
+#             try:
+#                 base_url = st.session_state["api_url"]
+#                 response = requests.get(f"{base_url}/claim/{fetch_claim_id.strip()}/details")
+#                 if response.status_code == 200:
+#                     st.session_state.claim_data = response.json()
+#                     st.session_state.claim_data["CLAIM_ID"] = fetch_claim_id.strip()
+#                     st.success("Data Autofilled Successfully!")
+#                 else:
+#                     st.error("Claim ID not found in database.")
+#             except Exception as e:
+#                 st.error("Failed to connect to backend.")
+
+#     st.divider()
+
+#     # 3. Load Data from State (Defaulting to basic values if empty)
+#     data = st.session_state.claim_data
+
+#     with st.form("fraud_form"):
+#         c1, c2, c3 = st.columns(3)
+
+#         claim_id = c1.text_input("Claim ID", value=data.get("CLAIM_ID", ""))
+        
+#         claim_amount = c2.number_input(
+#             "Claim Amount",
+#             min_value=0.01,
+#             value=float(data.get("CLAIM_AMOUNT", 50000.0)),
+#         )
+
+#         reporting_delay = c3.number_input(
+#             "Reporting Delay Days",
+#             min_value=0,
+#             value=int(data.get("REPORTING_DELAY_DAYS", 2)),
+#             step=1,
+#         )
+
+#         c1, c2, c3 = st.columns(3)
+
+#         incident_month = c1.number_input(
+#             "Incident Month",
+#             min_value=1,
+#             max_value=12,
+#             value=int(data.get("INCIDENT_MONTH", 6)),
+#             step=1,
+#         )
+
+#         age = c2.number_input(
+#             "Age",
+#             min_value=18,
+#             max_value=120,
+#             value=int(data.get("AGE", 40)),
+#             step=1,
+#         )
+
+#         income = c3.number_input(
+#             "Annual Income",
+#             min_value=0.0,
+#             value=float(data.get("ANNUAL_INCOME", 800000.0)),
+#         )
+
+#         c1, c2, c3 = st.columns(3)
+
+#         credit_score = c1.number_input(
+#             "Credit Score",
+#             min_value=0,
+#             value=int(data.get("CREDIT_SCORE", 700)),
+#             step=1,
+#         )
+
+#         sum_insured = c2.number_input(
+#             "Sum Insured",
+#             min_value=0.01,
+#             value=float(data.get("SUM_INSURED", 500000.0)),
+#         )
+
+#         annual_premium = c3.number_input(
+#             "Annual Premium",
+#             min_value=0.0,
+#             value=float(data.get("ANNUAL_PREMIUM", 15000.0)),
+#         )
+
+#         risk_score = st.number_input(
+#             "Policy Risk Score",
+#             value=float(data.get("POLICY_RISK_SCORE", 0.5)),
+#         )
+
+#         c1, c2, c3 = st.columns(3)
+
+#         claim_type = c1.text_input("Claim Type", value=data.get("CLAIM_TYPE", "Accident"))
+#         source = c2.text_input("Source", value=data.get("SOURCE", "Online"))
+#         claim_severity = c3.text_input("Claim Severity", value=data.get("CLAIM_SEVERITY", "Medium"))
+
+#         c1, c2, c3 = st.columns(3)
+
+#         gender = c1.text_input("Gender", value=data.get("GENDER", "Male"))
+#         marital_status = c2.text_input("Marital Status", value=data.get("MARITAL_STATUS", "Married"))
+#         occupation = c3.text_input("Occupation", value=data.get("OCCUPATION", "Salaried"))
+
+#         c1, c2, c3 = st.columns(3)
+
+#         state = c1.text_input("State", value=data.get("STATE", "Karnataka"))
+#         customer_risk = c2.text_input("Customer Risk Segment", value=data.get("CUSTOMER_RISK_SEGMENT", "Medium"))
+#         policy_type = c3.text_input("Policy Type", value=data.get("POLICY_TYPE", "Health"))
+
+#         c1, c2 = st.columns(2)
+
+#         payment_mode = c1.text_input("Payment Mode", value=data.get("PAYMENT_MODE", "Annual"))
+#         risk_band = c2.text_input("Policy Risk Band", value=data.get("RISK_BAND", "Medium"))
+
+#         submitted = st.form_submit_button(
+#             "Run Fraud Screening",
+#             type="primary",
+#         )
+
+#     if submitted:
+#         if not claim_id:
+#             st.warning("Claim ID is required.")
+#         else:
+#             payload = {
+#                 "CLAIM_ID": claim_id,
+#                 "CLAIM_AMOUNT": claim_amount,
+#                 "REPORTING_DELAY_DAYS": int(reporting_delay),
+#                 "INCIDENT_MONTH": int(incident_month),
+#                 "AGE": int(age),
+#                 "ANNUAL_INCOME": income,
+#                 "CREDIT_SCORE": int(credit_score),
+#                 "SUM_INSURED": sum_insured,
+#                 "ANNUAL_PREMIUM": annual_premium,
+#                 "RISK_SCORE": risk_score,
+#                 "CLAIM_TYPE": claim_type,
+#                 "SOURCE": source,
+#                 "CLAIM_SEVERITY": claim_severity,
+#                 "GENDER": gender,
+#                 "MARITAL_STATUS": marital_status,
+#                 "OCCUPATION": occupation,
+#                 "STATE": state,
+#                 "CUSTOMER_RISK_SEGMENT": customer_risk,
+#                 "POLICY_TYPE": policy_type,
+#                 "PAYMENT_MODE": payment_mode,
+#                 "RISK_BAND": risk_band,
+#             }
+
+#             try:
+#                 result = client.fraud(payload)
+#                 prediction = result.get("prediction", {})
+#                 decision = result.get("decision", {})
+
+#                 c1, c2, c3 = st.columns(3)
+#                 c1.metric("Fraud Risk", f"{prediction.get('fraud_risk_pct', 0)}%")
+#                 c2.metric("Alert", prediction.get("prediction", "-"))
+#                 c3.metric(
+#                     "Human Review",
+#                     "Required" if decision.get("human_review_required") else "No"
+#                 )
+
+#                 display_decision(decision)
+
+#                 if result.get("message"):
+#                     st.info(result["message"])
+
+#                 with st.expander("Raw API Response"):
+#                     st.json(result)
+
+#             except Exception as error:
+#                 show_api_error(error)
+
+# elif page == "Fraud Screening":
+
+#     st.title(
+#         "Fraud Risk Screening"
+#     )
+
+#     st.warning(
+#         "Fraud model output is an investigation signal, "
+#         "not proof of fraud and not an automatic claim rejection."
+#     )
 
 
-                prediction = result.get(
-                    "prediction",
-                    {}
-                )
+#     with st.form(
+#         "fraud_form"
+#     ):
 
-                decision = result.get(
-                    "decision",
-                    {}
-                )
+#         c1, c2, c3 = (
+#             st.columns(3)
+#         )
 
 
-                c1, c2, c3 = st.columns(3)
+#         claim_id = c1.text_input(
+#             "Claim ID"
+#         )
+
+#         claim_amount = c2.number_input(
+#             "Claim Amount",
+#             min_value=0.01,
+#             value=50000.0,
+#         )
+
+#         reporting_delay = c3.number_input(
+#             "Reporting Delay Days",
+#             min_value=0,
+#             value=2,
+#             step=1,
+#         )
 
 
-                c1.metric(
-                    "Fraud Risk",
-                    (
-                        f"{prediction.get('fraud_risk_pct', 0)}%"
-                    )
-                )
+#         c1, c2, c3 = (
+#             st.columns(3)
+#         )
 
 
-                c2.metric(
-                    "Alert",
-                    prediction.get(
-                        "prediction",
-                        "-"
-                    )
-                )
+#         incident_month = c1.number_input(
+#             "Incident Month",
+#             min_value=1,
+#             max_value=12,
+#             value=6,
+#             step=1,
+#         )
+
+#         age = c2.number_input(
+#             "Age",
+#             min_value=18,
+#             max_value=120,
+#             value=40,
+#             step=1,
+#         )
+
+#         income = c3.number_input(
+#             "Annual Income",
+#             min_value=0.0,
+#             value=800000.0,
+#         )
 
 
-                c3.metric(
-                    "Human Review",
-                    (
-                        "Required"
-                        if decision.get(
-                            "human_review_required"
-                        )
-                        else
-                        "No"
-                    )
-                )
+#         c1, c2, c3 = (
+#             st.columns(3)
+#         )
 
 
-                display_decision(
-                    decision
-                )
+#         credit_score = c1.number_input(
+#             "Credit Score",
+#             min_value=0,
+#             value=700,
+#             step=1,
+#         )
+
+#         sum_insured = c2.number_input(
+#             "Sum Insured",
+#             min_value=0.01,
+#             value=500000.0,
+#         )
+
+#         annual_premium = c3.number_input(
+#             "Annual Premium",
+#             min_value=0.0,
+#             value=15000.0,
+#         )
 
 
-                if result.get(
-                    "message"
-                ):
-
-                    st.info(
-                        result[
-                            "message"
-                        ]
-                    )
+#         risk_score = st.number_input(
+#             "Policy Risk Score",
+#             value=0.5,
+#         )
 
 
-                with st.expander(
-                    "Raw API Response"
-                ):
-
-                    st.json(
-                        result
-                    )
+#         c1, c2, c3 = (
+#             st.columns(3)
+#         )
 
 
-            except Exception as error:
+#         claim_type = c1.text_input(
+#             "Claim Type",
+#             value="Accident",
+#         )
 
-                show_api_error(
-                    error
-                )
+#         source = c2.text_input(
+#             "Source",
+#             value="Online",
+#         )
+
+#         claim_severity = c3.text_input(
+#             "Claim Severity",
+#             value="Medium",
+#         )
+
+
+#         c1, c2, c3 = (
+#             st.columns(3)
+#         )
+
+
+#         gender = c1.text_input(
+#             "Gender",
+#             value="Male",
+#         )
+
+#         marital_status = c2.text_input(
+#             "Marital Status",
+#             value="Married",
+#         )
+
+#         occupation = c3.text_input(
+#             "Occupation",
+#             value="Salaried",
+#         )
+
+
+#         c1, c2, c3 = (
+#             st.columns(3)
+#         )
+
+
+#         state = c1.text_input(
+#             "State",
+#             value="Karnataka",
+#         )
+
+#         customer_risk = c2.text_input(
+#             "Customer Risk Segment",
+#             value="Medium",
+#         )
+
+#         policy_type = c3.text_input(
+#             "Policy Type",
+#             value="Health",
+#         )
+
+
+#         c1, c2 = st.columns(2)
+
+
+#         payment_mode = c1.text_input(
+#             "Payment Mode",
+#             value="Annual",
+#         )
+
+#         risk_band = c2.text_input(
+#             "Policy Risk Band",
+#             value="Medium",
+#         )
+
+
+#         submitted = st.form_submit_button(
+#             "Run Fraud Screening",
+#             type="primary",
+#         )
+
+
+#     if submitted:
+
+#         if not claim_id:
+
+#             st.warning(
+#                 "Claim ID is required."
+#             )
+
+#         else:
+
+#             payload = {
+#                 "CLAIM_ID":
+#                     claim_id,
+
+#                 "CLAIM_AMOUNT":
+#                     claim_amount,
+
+#                 "REPORTING_DELAY_DAYS":
+#                     int(
+#                         reporting_delay
+#                     ),
+
+#                 "INCIDENT_MONTH":
+#                     int(
+#                         incident_month
+#                     ),
+
+#                 "AGE":
+#                     int(
+#                         age
+#                     ),
+
+#                 "ANNUAL_INCOME":
+#                     income,
+
+#                 "CREDIT_SCORE":
+#                     int(
+#                         credit_score
+#                     ),
+
+#                 "SUM_INSURED":
+#                     sum_insured,
+
+#                 "ANNUAL_PREMIUM":
+#                     annual_premium,
+
+#                 "RISK_SCORE":
+#                     risk_score,
+
+#                 "CLAIM_TYPE":
+#                     claim_type,
+
+#                 "SOURCE":
+#                     source,
+
+#                 "CLAIM_SEVERITY":
+#                     claim_severity,
+
+#                 "GENDER":
+#                     gender,
+
+#                 "MARITAL_STATUS":
+#                     marital_status,
+
+#                 "OCCUPATION":
+#                     occupation,
+
+#                 "STATE":
+#                     state,
+
+#                 "CUSTOMER_RISK_SEGMENT":
+#                     customer_risk,
+
+#                 "POLICY_TYPE":
+#                     policy_type,
+
+#                 "PAYMENT_MODE":
+#                     payment_mode,
+
+#                 "RISK_BAND":
+#                     risk_band,
+#             }
+
+
+#             try:
+
+#                 result = client.fraud(
+#                     payload
+#                 )
+
+
+#                 prediction = result.get(
+#                     "prediction",
+#                     {}
+#                 )
+
+#                 decision = result.get(
+#                     "decision",
+#                     {}
+#                 )
+
+
+#                 c1, c2, c3 = st.columns(3)
+
+
+#                 c1.metric(
+#                     "Fraud Risk",
+#                     (
+#                         f"{prediction.get('fraud_risk_pct', 0)}%"
+#                     )
+#                 )
+
+
+#                 c2.metric(
+#                     "Alert",
+#                     prediction.get(
+#                         "prediction",
+#                         "-"
+#                     )
+#                 )
+
+
+#                 c3.metric(
+#                     "Human Review",
+#                     (
+#                         "Required"
+#                         if decision.get(
+#                             "human_review_required"
+#                         )
+#                         else
+#                         "No"
+#                     )
+#                 )
+
+
+#                 display_decision(
+#                     decision
+#                 )
+
+
+#                 if result.get(
+#                     "message"
+#                 ):
+
+#                     st.info(
+#                         result[
+#                             "message"
+#                         ]
+#                     )
+
+
+#                 with st.expander(
+#                     "Raw API Response"
+#                 ):
+
+#                     st.json(
+#                         result
+#                     )
+
+
+#             except Exception as error:
+
+#                 show_api_error(
+#                     error
+#                 )
 
 
 # ==========================================================

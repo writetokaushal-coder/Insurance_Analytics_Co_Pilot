@@ -1,7 +1,14 @@
-CREATE DATABASE InsuranceAnalyticsDB;
-USE InsuranceAnalyticsDB;
+---CREATE DATABASE InsuranceAnalyticsDB;
+---USE InsuranceAnalyticsDB;
 
-CREATE SCHEMA analytics;
+---CREATE SCHEMA analytics;
+
+
+
+CREATE NONCLUSTERED INDEX IX_Policy360_Summary 
+ON analytics.policy_360 (CUSTOMER_ID, POLICY_STATUS, HAS_CLAIM_RECORD, HAS_FINALIZED_RENEWAL)
+INCLUDE (ANNUAL_PREMIUM);
+
 
 ---Portfolio KPIs------------------
 
@@ -193,29 +200,36 @@ ORDER BY STATE, PRODUCT_RANK;
 
 
 
---------------Create a Renewal Analysis View------------
-CREATE VIEW analytics.vw_finalized_renewals
-AS
+----------------Create a Renewal Analysis View------------
+--CREATE VIEW analytics.vw_finalized_renewals
+--AS
 
-SELECT *
-FROM analytics.policy_360
+--SELECT *
+--FROM analytics.policy_360
 
-WHERE HAS_FINALIZED_RENEWAL = 1;
+--WHERE HAS_FINALIZED_RENEWAL = 1;
 
-CREATE VIEW analytics.vw_finalized_renewals
-AS
+--CREATE VIEW analytics.vw_finalized_renewals
+--AS
 
-SELECT *
-FROM analytics.policy_360
+--SELECT *
+--FROM analytics.policy_360
 
-WHERE HAS_FINALIZED_RENEWAL = 1;
+--WHERE HAS_FINALIZED_RENEWAL = 1;
 
 
-CREATE OR ALTER VIEW analytics.vw_policy_360_dashboard
-AS
-SELECT *
-FROM analytics.policy_360;
+--CREATE OR ALTER VIEW analytics.vw_policy_360_dashboard
+--AS
+--SELECT *
+--FROM analytics.policy_360;
 
-SELECT TOP 10 *
-FROM analytics.vw_policy_360_dashboard;
+--SELECT TOP 10 *
+--FROM analytics.vw_policy_360_dashboard;
 
+USE InsuranceAnalyticsDB;
+
+-- Check karo table me data hai ya nahi
+SELECT COUNT(*) FROM analytics.claims;
+
+-- Check karo ki specific claim ID exist karti hai ya nahi
+SELECT TOP 5 * FROM analytics.claims WHERE CLAIM_ID = 'CLM000000015';
